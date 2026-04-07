@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Recipe Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --gold: #c4922a; --gold-light: #e0b050;
+    --bg: #0d0d0d; --surface: #181410; --surface2: #211c14;
+    --border: #2e2518; --text: #f0ebe0; --muted: #8a7a5a; --dim: #5a4a30;
+    --card-img-h: 130px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Lato', sans-serif; min-height: 100vh; }
+
+  /* ── LOCK SCREEN ── */
+  #lockScreen {
+    position: fixed; inset: 0; background: #0d0d0d;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; flex-direction: column;
+  }
+  #lockScreen.hidden { display: none; }
+  .lock-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 40px 32px; text-align: center;
+    max-width: 320px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  }
+  .lock-icon { font-size: 48px; margin-bottom: 14px; }
+  .lock-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--gold); margin-bottom: 6px; }
+  .lock-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .lock-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 16px; color: var(--text);
+    font-size: 20px; font-family: 'Lato', sans-serif; outline: none;
+    text-align: center; letter-spacing: 0.2em; margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .lock-input:focus { border-color: var(--gold); }
+  .lock-input.error { border-color: #c04040; animation: shake 0.3s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  .lock-btn {
+    width: 100%; background: var(--gold); color: #0d0d0d; border: none;
+    border-radius: 10px; padding: 13px; font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: 'Lato', sans-serif; transition: background 0.2s;
+  }
+  .lock-btn:hover { background: var(--gold-light); }
+  .lock-error { font-size: 13px; color: #c04040; margin-top: 10px; min-height: 18px; }
+  .lock-change { font-size: 12px; color: var(--dim); margin-top: 16px; cursor: pointer; text-decoration: underline; }
+  .lock-change:hover { color: var(--muted); }
+
+  /* ── CHANGE PASSWORD MODAL ── */
+  #pwModal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85); z-index: 600;
+    align-items: center; justify-content: center;
+  }
+  #pwModal.show { display: flex; }
+  .pw-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 30px 26px; max-width: 300px; width: 90%;
+  }
+  .pw-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold); margin-bottom: 16px; }
+  .pw-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 13px; color: var(--text);
+    font-size: 15px; font-family: 'Lato', sans-serif; outline: none;
+    margin-bottom: 10px; transition: border-color 0.2s;
+  }
+  .pw-input:focus { border-color: var(--gold); }
+  .pw-row { display: flex; gap: 10px; margin-top: 4px; }
+  .pw-save { flex: 1; background: var(--gold); color: #0d0d0d; border: none; border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
+  .pw-cancel { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 10px 14px; font-size: 14px; cursor: pointer; font-family: 'Lato', sans-serif; }
+  .pw-msg { font-size: 12px; color: #c04040; min-height: 16px; margin-bottom: 4px; }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #1a1207, #2a1c08);
+    border-bottom: 2px solid var(--gold); padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .brand-icon { font-size: 26px; }
+  .brand-name { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); }
+  .brand-sub { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #searchInput {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; color: var(--text); font-size: 14px; font-family: 'Lato', sans-serif;
+    outline: none; width: 120px; transition: border-color 0.2s;
+  }
+  #searchInput:focus { border-color: var(--gold); }
+  .add-btn {
+    background: var(--gold); color: #0d0d0d; border: none; border-radius: 8px;
+    padding: 9px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+    font-family: 'Lato', sans-serif; display: inline-flex; align-items: center; gap: 5px;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .add-btn:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .lock-hdr-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 9px 11px; font-size: 15px; cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .lock-hdr-btn:hover { border-color: var(--gold); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── SHARE BANNER ── */
+  .share-banner {
+    background: linear-gradient(135deg, #1e1608, #2a1c0a);
+    border: 1px solid var(--border); border-radius: 14px;
+    margin: 14px 14px 6px; padding: 16px 18px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .share-qr-wrap canvas, .share-qr-wrap img { border-radius: 6px; border: 4px solid #fff; display: block; }
+  .share-info { flex: 1; min-width: 150px; }
+  .share-title { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold); margin-bottom: 4px; }
+  .share-sub { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+  .share-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .share-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 7px 13px; font-size: 12px; cursor: pointer;
+    font-family: 'Lato', sans-serif; transition: border-color 0.2s;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .share-btn:hover { border-color: var(--gold); }
+  .share-btn.primary { background: var(--gold); color: #0d0d0d; border-color: var(--gold); font-weight: 700; }
+  .share-btn.primary:hover { background: var(--gold-light); }
+
+  /* ── CONTROLS BAR ── */
+  .controls-bar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 8px 16px 4px; flex-wrap: wrap;
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+  .ctrl-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--gold); cursor: pointer;
+  }
+  .ctrl-val { font-size: 12px; color: var(--gold); min-width: 52px; }
+  .divider { width: 1px; height: 20px; background: var(--border); }
+
+  /* ── GRID ── */
+  #emptyState { text-align: center; padding: 50px 24px; color: var(--dim); }
+  .empty-icon { font-size: 50px; margin-bottom: 12px; }
+  .empty-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--muted); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; line-height: 1.6; }
+  .recipe-count { font-size: 12px; color: var(--dim); padding: 6px 16px 2px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--grid-min, 155px), 1fr));
+    gap: 14px; padding: 8px 14px 30px;
+  }
+  .card {
+    background: var(--surface); border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border); cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--gold); box-shadow: 0 8px 24px rgba(196,146,42,0.15); }
+  .card img { width: 100%; height: var(--card-img-h); object-fit: cover; display: block; }
+  .card-body { padding: 9px 11px 11px; }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 13px; color: var(--text); margin-bottom: 3px; line-height: 1.3; }
+  .card-summary { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .card-date { font-size: 10px; color: var(--dim); margin-top: 5px; }
+
+  /* ── DETAIL ── */
+  #detailPage { max-width: 560px; margin: 0 auto; padding: 20px 16px 50px; }
+  .back-btn {
+    background: none; border: 1px solid var(--border); color: var(--gold);
+    border-radius: 8px; padding: 7px 16px; font-size: 13px; cursor: pointer;
+    font-family: 'Lato', sans-serif; margin-bottom: 18px; transition: border-color 0.2s;
+  }
+  .back-btn:hover { border-color: var(--gold); }
+  #detailImg { width: 100%; border-radius: 12px; object-fit: cover; border: 1px solid var(--border); display: block; transition: max-height 0.3s; }
+  .img-resize-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; margin: 10px 0 14px;
+  }
+  .img-resize-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  #imgSizeSlider { flex: 1; }
+  .img-resize-val { font-size: 11px; color: var(--gold); min-width: 36px; text-align: right; }
+  .ai-summary {
+    background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--gold);
+    border-radius: 8px; padding: 10px 13px; font-size: 13px; color: #b0a080;
+    margin-bottom: 16px; line-height: 1.6; font-style: italic;
+  }
+  .field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px; display: block; }
+  .field-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 13px; color: var(--text); font-size: 15px; font-family: 'Lato', sans-serif;
+    outline: none; margin-bottom: 14px; transition: border-color 0.2s;
+  }
+  .field-input:focus { border-color: var(--gold); }
+  textarea.field-input { min-height: 90px; resize: vertical; font-size: 14px; }
+  .action-row { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .save-btn {
+    background: var(--gold); color: #0d0d0d; border: none; border-radius: 8px;
+    padding: 10px 26px; font-size: 14px; font-weight: 700; cursor: pointer;
+    font-family: 'Lato', sans-serif; transition: background 0.2s;
+  }
+  .save-btn:hover { background: var(--gold-light); }
+  .save-btn.saved { background: #3a8a3a; color: #fff; }
+  .del-btn {
+    background: none; border: 1px solid #5a2020; color: #c04040; border-radius: 8px;
+    padding: 10px 16px; font-size: 13px; cursor: pointer; font-family: 'Lato', sans-serif;
+  }
+  .del-btn:hover { background: rgba(192,64,64,0.1); border-color: #c04040; }
+  .qr-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
+  .qr-title { font-family: 'Playfair Display', serif; font-size: 15px; color: var(--gold); margin-bottom: 4px; }
+  .qr-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+  #recipeQR { display: flex; justify-content: center; margin-bottom: 12px; }
+  #recipeQR canvas, #recipeQR img { border-radius: 6px; border: 4px solid #fff; }
+  .qr-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .qr-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 9px 16px; font-size: 13px; cursor: pointer;
+    font-family: 'Lato', sans-serif; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .qr-btn:hover { border-color: var(--gold); }
+  .qr-btn.primary { background: var(--gold); color: #0d0d0d; border-color: var(--gold); font-weight: 700; }
+  .qr-btn.primary:hover { background: var(--gold-light); }
+
+  /* ── VIEW PAGE ── */
+  #viewPage { max-width: 560px; margin: 0 auto; padding: 20px 16px 50px; }
+  #viewImg { width: 100%; border-radius: 12px; margin-bottom: 14px; max-height: 360px; object-fit: cover; border: 1px solid var(--border); display: block; }
+  .view-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--gold); margin-bottom: 8px; }
+  .view-summary { font-size: 14px; color: var(--muted); font-style: italic; line-height: 1.6; margin-bottom: 14px; }
+  .view-notes-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .view-notes { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
+  .view-date { font-size: 11px; color: var(--dim); margin-top: 12px; }
+
+  /* ── OVERLAY ── */
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 500; align-items: center; justify-content: center; }
+  #overlay.show { display: flex; }
+  .overlay-box { background: var(--surface); border-radius: 16px; padding: 44px 36px; text-align: center; max-width: 280px; }
+  .overlay-icon { font-size: 44px; margin-bottom: 14px; }
+  .overlay-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--gold); margin-bottom: 8px; }
+  .overlay-msg { font-size: 13px; color: var(--muted); }
+
+  @media (max-width: 480px) {
+    .brand-name { font-size: 17px; }
+    #searchInput { width: 90px; }
+    .add-btn { padding: 9px 10px; font-size: 13px; }
+    .share-banner { flex-direction: column; align-items: center; text-align: center; }
+    .share-actions { justify-content: center; }
+    .controls-bar { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ LOCK SCREEN ══ -->
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">Recipe Vault</div>
+    <div class="lock-sub">Enter your password to continue</div>
+    <input type="password" class="lock-input" id="lockInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')unlock()"/>
+    <button class="lock-btn" onclick="unlock()">Unlock</button>
+    <div class="lock-error" id="lockError"></div>
+    <div class="lock-change" onclick="showChangePw()">Change password</div>
+  </div>
+</div>
+
+<!-- ══ CHANGE PASSWORD MODAL ══ -->
+<div id="pwModal">
+  <div class="pw-box">
+    <div class="pw-title">🔑 Change Password</div>
+    <input type="password" class="pw-input" id="pwCurrent" placeholder="Current password"/>
+    <input type="password" class="pw-input" id="pwNew" placeholder="New password"/>
+    <input type="password" class="pw-input" id="pwConfirm" placeholder="Confirm new password"/>
+    <div class="pw-msg" id="pwMsg"></div>
+    <div class="pw-row">
+      <button class="pw-save" onclick="saveNewPw()">Save</button>
+      <button class="pw-cancel" onclick="closePwModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="brand">
+    <span class="brand-icon">📖</span>
+    <div>
+      <div class="brand-name">Recipe Vault</div>
+      <div class="brand-sub">Your personal collection</div>
+    </div>
+  </div>
+  <div class="header-right" id="headerRight">
+    <input type="text" id="searchInput" placeholder="Search…" oninput="doSearch()"/>
+    <label class="add-btn" for="fileInput">📷 Add</label>
+    <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none" onchange="handleFile(event)"/>
+    <button class="lock-hdr-btn" title="Lock app" onclick="lockApp()">🔒</button>
+  </div>
+</header>
+
+<!-- ══ HOME PAGE ══ -->
+<div id="homePage" class="page active">
+  <div class="share-banner">
+    <div class="share-qr-wrap" id="appQR"></div>
+    <div class="share-info">
+      <div class="share-title">📲 Share This Vault</div>
+      <div class="share-sub">Scan to open Recipe Vault instantly.</div>
+      <div class="share-actions">
+        <button class="share-btn primary" onclick="downloadAppQR()">⬇ Save QR</button>
+        <button class="share-btn" id="copyAppBtn" onclick="copyAppLink()">🔗 Copy Link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS: card size + age filter -->
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <span class="ctrl-label">🖼 Size:</span>
+      <input type="range" id="sizeSlider" min="1" max="3" step="1" value="2" style="width:80px" oninput="updateGridSize(this.value)"/>
+      <span class="ctrl-val" id="sizeVal">Medium</span>
+    </div>
+    <div class="divider"></div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">📅 Show recipes up to:</span>
+      <input type="range" id="ageSlider" min="1" max="15" step="1" value="15" style="width:90px" oninput="updateAgeFilter(this.value)"/>
+      <span class="ctrl-val" id="ageVal">All</span>
+    </div>
+  </div>
+
+  <div id="emptyState" style="display:none">
+    <div class="empty-icon">📸</div>
+    <div class="empty-title">No recipes to show</div>
+    <div class="empty-sub">Tap <strong style="color:var(--gold)">📷 Add</strong> to photograph and save your first recipe</div>
+  </div>
+  <div class="recipe-count" id="recipeCount" style="display:none"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- ══ DETAIL PAGE ══ -->
+<div id="detailPage" class="page">
+  <button class="back-btn" onclick="showHome()">← Back</button>
+  <img id="detailImg" src="" alt="" style="max-height:300px"/>
+  <div class="img-resize-bar">
+    <span class="img-resize-label">🔍 Photo size:</span>
+    <input type="range" id="imgSizeSlider" min="150" max="600" step="50" value="300" oninput="resizeDetailImg(this.value)"/>
+    <span class="img-resize-val" id="imgSizeVal">300px</span>
+  </div>
+  <div class="ai-summary" id="aiSummary" style="display:none"></div>
+  <label class="field-label">Recipe Title</label>
+  <input type="text" class="field-input" id="detailTitle" placeholder="Recipe name…"/>
+  <label class="field-label">Your Notes</label>
+  <textarea class="field-input" id="detailNotes" placeholder="Tips, tweaks, serving ideas…"></textarea>
+  <div class="action-row">
+    <div style="display:flex;gap:10px">
+      <button class="save-btn" id="saveBtn" onclick="saveRecipe()">Save</button>
+      <button class="del-btn" onclick="confirmDelete()">Delete</button>
+    </div>
+    <span style="font-size:11px;color:var(--dim)" id="detailDate"></span>
+  </div>
+  <div class="qr-section">
+    <div class="qr-title">📲 Share This Recipe</div>
+    <div class="qr-sub">Family members scan to open this recipe instantly</div>
+    <div id="recipeQR"></div>
+    <div class="qr-actions">
+      <button class="qr-btn primary" onclick="downloadRecipeQR()">⬇ Save QR</button>
+      <button class="qr-btn" id="copyRecipeBtn" onclick="copyRecipeLink()">🔗 Copy Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VIEW PAGE ══ -->
+<div id="viewPage" class="page">
+  <button class="back-btn" onclick="showHome()">← All Recipes</button>
+  <img id="viewImg" src="" alt=""/>
+  <div class="view-title" id="viewTitle"></div>
+  <div class="view-summary" id="viewSummary" style="display:none"></div>
+  <div id="viewNotesWrap" style="display:none">
+    <div class="view-notes-label">Notes</div>
+    <div class="view-notes" id="viewNotes"></div>
+  </div>
+  <div class="view-date" id="viewDate"></div>
+</div>
+
+<!-- ══ OVERLAY ══ -->
+<div id="overlay">
+  <div class="overlay-box">
+    <div class="overlay-icon">🔍</div>
+    <div class="overlay-title">Saving Recipe…</div>
+    <div class="overlay-msg" id="overlayMsg">Reading image…</div>
+  </div>
+</div>
+
+<script>
+const STORE    = 'recipe-vault-v4';
+const PW_KEY   = 'rv-password';
+const DEFAULT_PW = '3540'; // default password — user should change this
+
+let recipes   = [];
+let currentId = null;
+let unlocked  = false;
+let maxAgeYrs = 15;
+
+try { recipes = JSON.parse(localStorage.getItem(STORE)) || []; } catch { recipes = []; }
+function persist() { try { localStorage.setItem(STORE, JSON.stringify(recipes)); } catch {} }
+function getStoredPw() { return localStorage.getItem(PW_KEY) || DEFAULT_PW; }
+
+// ── LOCK / UNLOCK ──────────────────────────────────────────────────
+function unlock() {
+  const val = document.getElementById('lockInput').value;
+  if (val === getStoredPw()) {
+    unlocked = true;
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('lockInput').value = '';
+    document.getElementById('lockError').textContent = '';
+    const rid = new URLSearchParams(window.location.search).get('recipe');
+    if (rid) {
+      const r = recipes.find(x => String(x.id) === String(rid));
+      if (r) { showViewPage(r); return; }
+    }
+    renderGrid(recipes);
+    setTimeout(buildAppQR, 200);
+  } else {
+    const inp = document.getElementById('lockInput');
+    inp.classList.add('error');
+    document.getElementById('lockError').textContent = 'Incorrect password. Try again.';
+    setTimeout(() => inp.classList.remove('error'), 400);
+  }
+}
+
+function lockApp() {
+  unlocked = false;
+  document.getElementById('lockScreen').classList.remove('hidden');
+  document.getElementById('lockInput').value = '';
+  document.getElementById('lockError').textContent = '';
+}
+
+function showChangePw() {
+  document.getElementById('pwCurrent').value = '';
+  document.getElementById('pwNew').value = '';
+  document.getElementById('pwConfirm').value = '';
+  document.getElementById('pwMsg').textContent = '';
+  document.getElementById('pwModal').classList.add('show');
+}
+function closePwModal() { document.getElementById('pwModal').classList.remove('show'); }
+
+function saveNewPw() {
+  const cur = document.getElementById('pwCurrent').value;
+  const nw  = document.getElementById('pwNew').value;
+  const con = document.getElementById('pwConfirm').value;
+  const msg = document.getElementById('pwMsg');
+  if (cur !== getStoredPw()) { msg.textContent = 'Current password is wrong.'; return; }
+  if (nw.length < 4)          { msg.textContent = 'New password must be at least 4 characters.'; return; }
+  if (nw !== con)              { msg.textContent = 'Passwords do not match.'; return; }
+  localStorage.setItem(PW_KEY, nw);
+  msg.style.color = '#3a8a3a';
+  msg.textContent = '✓ Password changed!';
+  setTimeout(closePwModal, 1200);
+}
+
+// ── DELETE WITH PASSWORD CONFIRM ──────────────────────────────────
+function confirmDelete() {
+  const pw = prompt('Enter your password to delete this recipe:');
+  if (pw === null) return; // cancelled
+  if (pw !== getStoredPw()) { alert('Incorrect password. Recipe not deleted.'); return; }
+  recipes = recipes.filter(r => r.id != currentId);
+  persist(); showHome();
+}
+
+// ── AGE FILTER ────────────────────────────────────────────────────
+function updateAgeFilter(v) {
+  maxAgeYrs = parseInt(v);
+  const label = maxAgeYrs >= 15 ? 'All' : maxAgeYrs + ' yr' + (maxAgeYrs > 1 ? 's' : '');
+  document.getElementById('ageVal').textContent = label;
+  localStorage.setItem('rv-age-filter', v);
+  doSearch();
+}
+
+function recipePassesAgeFilter(r) {
+  if (maxAgeYrs >= 15) return true;
+  const parts = (r.date || '').split('/');
+  if (parts.length < 3) return true;
+  const saved = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - maxAgeYrs);
+  return saved >= cutoff;
+}
+
+// ── GRID SIZE ────────────────────────────────────────────────────
+const sizeMap = {
+  1: { min:'110px', imgH:'90px',  label:'Small'  },
+  2: { min:'155px', imgH:'130px', label:'Medium' },
+  3: { min:'220px', imgH:'180px', label:'Large'  }
+};
+function updateGridSize(v) {
+  const s = sizeMap[v];
+  document.documentElement.style.setProperty('--grid-min', s.min);
+  document.documentElement.style.setProperty('--card-img-h', s.imgH);
+  document.getElementById('sizeVal').textContent = s.label;
+  localStorage.setItem('rv-grid-size', v);
+}
+
+// ── DETAIL IMAGE RESIZE ──────────────────────────────────────────
+function resizeDetailImg(v) {
+  document.getElementById('detailImg').style.maxHeight = v + 'px';
+  document.getElementById('imgSizeVal').textContent = v + 'px';
+  localStorage.setItem('rv-img-size', v);
+}
+
+// ── QR CODES ─────────────────────────────────────────────────────
+function getPageURL() { return window.location.origin + window.location.pathname; }
+function buildAppQR() {
+  const el = document.getElementById('appQR'); el.innerHTML = '';
+  new QRCode(el, { text: getPageURL(), width:110, height:110, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.H });
+}
+function downloadAppQR() {
+  const c = document.querySelector('#appQR canvas'); if (!c) return;
+  const a = document.createElement('a'); a.download='recipe-vault-qr.png'; a.href=c.toDataURL(); a.click();
+}
+function copyAppLink() {
+  navigator.clipboard.writeText(getPageURL()).then(() => {
+    const b = document.getElementById('copyAppBtn'); b.textContent='✓ Copied!';
+    setTimeout(()=>b.textContent='🔗 Copy Link',2000);
+  }).catch(()=>prompt('Copy this link:',getPageURL()));
+}
+function buildRecipeQR(id) {
+  const el = document.getElementById('recipeQR'); el.innerHTML='';
+  new QRCode(el, { text: getPageURL()+'?recipe='+id, width:160, height:160, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.H });
+}
+function downloadRecipeQR() {
+  const c = document.querySelector('#recipeQR canvas'); if (!c) return;
+  const r = recipes.find(x=>x.id==currentId);
+  const name=(r?r.title:'recipe').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  const a=document.createElement('a'); a.download=name+'_qr.png'; a.href=c.toDataURL(); a.click();
+}
+function copyRecipeLink() {
+  const url=getPageURL()+'?recipe='+currentId;
+  navigator.clipboard.writeText(url).then(()=>{
+    const b=document.getElementById('copyRecipeBtn'); b.textContent='✓ Copied!';
+    setTimeout(()=>b.textContent='🔗 Copy Link',2000);
+  }).catch(()=>prompt('Copy this link:',url));
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────────
+function showHome() {
+  history.replaceState(null,'',window.location.pathname);
+  ['detailPage','viewPage'].forEach(p=>document.getElementById(p).classList.remove('active'));
+  document.getElementById('homePage').classList.add('active');
+  document.getElementById('headerRight').style.display='';
+  doSearch();
+}
+
+function showDetail(r) {
+  currentId = r.id;
+  const savedImgSize = localStorage.getItem('rv-img-size') || 300;
+  document.getElementById('detailImg').src = r.image;
+  document.getElementById('detailImg').style.maxHeight = savedImgSize+'px';
+  document.getElementById('imgSizeSlider').value = savedImgSize;
+  document.getElementById('imgSizeVal').textContent = savedImgSize+'px';
+  document.getElementById('detailTitle').value = r.title;
+  document.getElementById('detailNotes').value = r.notes||'';
+  document.getElementById('detailDate').textContent = r.date;
+  const s = document.getElementById('aiSummary');
+  if (r.summary) { s.textContent='💡 '+r.summary; s.style.display=''; } else { s.style.display='none'; }
+  document.getElementById('saveBtn').textContent='Save';
+  document.getElementById('saveBtn').className='save-btn';
+  ['homePage','viewPage'].forEach(p=>document.getElementById(p).classList.remove('active'));
+  document.getElementById('detailPage').classList.add('active');
+  document.getElementById('headerRight').style.display='none';
+  window.scrollTo(0,0);
+  buildRecipeQR(r.id);
+}
+
+function showViewPage(r) {
+  document.getElementById('viewImg').src=r.image;
+  document.getElementById('viewTitle').textContent=r.title;
+  const s=document.getElementById('viewSummary');
+  if(r.summary){s.textContent=r.summary;s.style.display='';}else{s.style.display='none';}
+  const nw=document.getElementById('viewNotesWrap');
+  if(r.notes){document.getElementById('viewNotes').textContent=r.notes;nw.style.display='';}else{nw.style.display='none';}
+  document.getElementById('viewDate').textContent='Saved '+r.date;
+  ['homePage','detailPage'].forEach(p=>document.getElementById(p).classList.remove('active'));
+  document.getElementById('viewPage').classList.add('active');
+  document.getElementById('headerRight').style.display='none';
+  window.scrollTo(0,0);
+}
+
+// ── RENDER GRID ──────────────────────────────────────────────────
+function doSearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = recipes.filter(r =>
+    recipePassesAgeFilter(r) &&
+    (r.title.toLowerCase().includes(q) || (r.summary||'').toLowerCase().includes(q))
+  );
+  renderGrid(filtered);
+}
+
+function renderGrid(list) {
+  const grid=document.getElementById('grid');
+  const empty=document.getElementById('emptyState');
+  const count=document.getElementById('recipeCount');
+  if(list.length===0){
+    empty.style.display='';
+    empty.querySelector('.empty-title').textContent = recipes.length===0?'No recipes saved yet':'No recipes to show';
+    empty.querySelector('.empty-sub').innerHTML = recipes.length===0
+      ?'Tap <strong style="color:var(--gold)">📷 Add</strong> to photograph and save your first recipe'
+      :'Try adjusting your search or age filter';
+    grid.innerHTML=''; count.style.display='none'; return;
+  }
+  empty.style.display='none'; count.style.display='';
+  count.textContent=list.length+' recipe'+(list.length!==1?'s':'');
+  grid.innerHTML=list.map(r=>`
+    <div class="card" onclick="showDetail(getRecipe(${r.id}))">
+      <img src="${r.image}" alt="${esc(r.title)}" loading="lazy"/>
+      <div class="card-body">
+        <div class="card-title">${esc(r.title)}</div>
+        ${r.summary?`<div class="card-summary">${esc(r.summary)}</div>`:''}
+        <div class="card-date">${r.date}</div>
+      </div>
+    </div>`).join('');
+}
+
+function getRecipe(id){return recipes.find(r=>r.id==id);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── SAVE RECIPE ──────────────────────────────────────────────────
+function saveRecipe() {
+  const idx=recipes.findIndex(r=>r.id==currentId); if(idx<0)return;
+  recipes[idx].title=document.getElementById('detailTitle').value||'My Recipe';
+  recipes[idx].notes=document.getElementById('detailNotes').value;
+  persist();
+  const btn=document.getElementById('saveBtn');
+  btn.textContent='✓ Saved!'; btn.className='save-btn saved';
+  setTimeout(()=>{btn.textContent='Save';btn.className='save-btn';},2000);
+}
+
+// ── IMAGE COMPRESSION + UPLOAD ────────────────────────────────────
+function compressImage(file,maxW,maxH,quality){
+  return new Promise(res=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxW||h>maxH){const r=Math.min(maxW/w,maxH/h);w=Math.round(w*r);h=Math.round(h*r);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',quality));
+    };img.src=url;
+  });
+}
+
+async function handleFile(e) {
+  const file=e.target.files?.[0]; if(!file)return;
+  e.target.value='';
+  showOverlay('Compressing image…');
+  try {
+    const dataURL=await compressImage(file,1200,1200,0.80);
+    const b64=dataURL.split(',')[1];
+    showOverlay('AI identifying recipe…');
+    let title='My Recipe',summary='';
+    try {
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+            {type:'text',text:'What recipe is in this photo? Reply ONLY with JSON, no markdown: {"title":"...","summary":"..."}'}
+          ]}]
+        })
+      });
+      const data=await resp.json();
+      const txt=(data.content?.find(b=>b.type==='text')?.text||'{}').replace(/```json|```/g,'').trim();
+      const parsed=JSON.parse(txt);title=parsed.title||title;summary=parsed.summary||'';
+    } catch{}
+    const recipe={id:Date.now(),title,summary,notes:'',image:dataURL,date:new Date().toLocaleDateString('en-GB')};
+    recipes.unshift(recipe);persist();
+    hideOverlay();showDetail(recipe);
+  } catch(err){console.error(err);hideOverlay();doSearch();}
+}
+
+function showOverlay(msg){document.getElementById('overlayMsg').textContent=msg;document.getElementById('overlay').classList.add('show');}
+function hideOverlay(){document.getElementById('overlay').classList.remove('show');}
+
+// ── INIT ─────────────────────────────────────────────────────────
+const savedGridSize = localStorage.getItem('rv-grid-size')||2;
+document.getElementById('sizeSlider').value=savedGridSize;
+updateGridSize(savedGridSize);
+
+const savedAge = localStorage.getItem('rv-age-filter')||15;
+document.getElementById('ageSlider').value=savedAge;
+updateAgeFilter(savedAge);
+</script>
+</body>
+</html>
