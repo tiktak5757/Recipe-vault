@@ -1,0 +1,25 @@
+{
+  "name": "محمد طارق",
+  "short_name": "محمد طارق",
+  "description": "مجموعتك الشخصية من الوصفات",
+  "start_url": "/Recipe-vault/",
+  "scope": "/Recipe-vault/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#8b0000",
+  "theme_color": "#8b0000",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%238b0000'/%3E%3Crect x='30' y='50' width='132' height='122' rx='6' fill='white'/%3E%3Cpolyline points='30,50 46,26 62,50 78,26 94,50 110,26 126,50 142,26 158,50 162,50' fill='white' stroke='white' stroke-width='4' stroke-linejoin='round'/%3E%3Cline x1='50' y1='90' x2='142' y2='90' stroke='%23c4922a' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='50' y1='112' x2='130' y2='112' stroke='%23c4922a' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='50' y1='134' x2='136' y2='134' stroke='%23c4922a' stroke-width='5' stroke-linecap='round'/%3E%3Cline x1='50' y1='156' x2='110' y2='156' stroke='%23c4922a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%238b0000'/%3E%3Crect x='80' y='130' width='352' height='326' rx='10' fill='white'/%3E%3Cpolyline points='80,130 122,68 164,130 206,68 248,130 290,68 332,130 374,68 416,130 432,130' fill='white' stroke='white' stroke-width='8' stroke-linejoin='round'/%3E%3Cline x1='130' y1='240' x2='382' y2='240' stroke='%23c4922a' stroke-width='14' stroke-linecap='round'/%3E%3Cline x1='130' y1='298' x2='348' y2='298' stroke='%23c4922a' stroke-width='14' stroke-linecap='round'/%3E%3Cline x1='130' y1='356' x2='362' y2='356' stroke='%23c4922a' stroke-width='14' stroke-linecap='round'/%3E%3Cline x1='130' y1='414' x2='294' y2='414' stroke='%23c4922a' stroke-width='14' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
